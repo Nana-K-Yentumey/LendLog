@@ -1,24 +1,26 @@
-import React, { useContext } from 'react'
-import { TransactionContext } from '../context/TransactionContext'
+// src/components/TransactionList.jsx
+import { useTransactions } from "../context/TransactionContext";
 
-export default function TransactionList({ transactions }) {
-  const { removeTransaction } = useContext(TransactionContext)
-
-  if (!transactions || transactions.length === 0) return <div className="text-gray-600">No records yet.</div>
+const TransactionList = () => {
+  const { transactions } = useTransactions();
 
   return (
-    <div className="space-y-2">
-      {transactions.slice().reverse().map(tx => (
-        <div key={tx.id} className="flex items-center justify-between p-3 border rounded">
-          <div>
-            <div className="font-semibold">{tx.person} {tx.type === 'lent' ? '→ Owes you' : '→ You owe'}</div>
-            <div className="text-sm text-gray-600">GHS {Number(tx.amount).toFixed(2)} {tx.date ? `• ${tx.date}` : ''}</div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button className="text-sm text-red-600" onClick={() => removeTransaction(tx.id)}>Delete</button>
-          </div>
-        </div>
-      ))}
+    <div className="mt-4">
+      <h2 className="font-bold mb-2">Transactions</h2>
+      <ul className="space-y-1">
+        {transactions.length === 0 ? (
+          <p>No transactions yet.</p>
+        ) : (
+          transactions.map(tx => (
+            <li key={tx.id} className="border-b py-1 flex justify-between">
+              <span>{tx.description}</span>
+              <span>${tx.amount}</span>
+            </li>
+          ))
+        )}
+      </ul>
     </div>
-  )
-}
+  );
+};
+
+export default TransactionList;

@@ -1,42 +1,35 @@
-import React, { createContext, useEffect, useState } from 'react'
+// src/context/TransactionContext.jsx
+import { createContext, useContext, useState, useEffect } from "react";
+import { addTransaction, getTransactions } from "../services/db";
 
-export const TransactionContext = createContext()
+const TransactionContext = createContext();
 
-const STORAGE_KEY = 'lendlog_transactions_v1'
-
-export function TransactionProvider({ children }) {
-  const [transactions, setTransactions] = useState([])
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setTransactions(JSON.parse(raw))
-    } catch (e) {
-      console.error('Failed to load from localStorage', e)
-    }
-  }, [])
+export const TransactionProvider = ({ children }) => {
+  const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions))
-    } catch (e) {
-      console.error('Failed to save to localStorage', e)
-    }
-  }, [transactions])
+    const fetchTransactions = async () => {
+      try {
+        const data = await getTransactions();
+        setTransactions(data);
+      } catch (err) {
+        console.error("Error fetching transactions:", err);
+      }
+    };
 
-  const addTransaction = (tx) => {
-    setTransactions(prev => [...prev, { id: Date.now().toString(), ...tx }])
-  }
+    fetchTransactions();
+  }, []);
 
-  const removeTransaction = (id) => {
-    setTransactions(prev => prev.filter(t => t.id !== id))
-  }
-
-  const clearAll = () => setTransactions([])
+  const addNewTransaction = async (transaction) => {
+    await addTransaction(transaction);
+    setTransactions(prev => [...prev, transaction]);
+  };
 
   return (
-    <TransactionContext.Provider value={{ transactions, addTransaction, removeTransaction, clearAll }}>
+    <TransactionContext.Provider value={{ transactions, addNewTransaction }}>
       {children}
     </TransactionContext.Provider>
-  )
-}
+  );
+};
+
+export const useTransactions = () => useContext(TransactionContext);

@@ -1,34 +1,59 @@
-import React, { useState, useContext } from 'react'
-import { TransactionContext } from '../context/TransactionContext'
+// src/components/AddTransactionForm.jsx
+import { useState } from "react";
+import { useTransactions } from "../context/TransactionContext";
 
-export default function AddTransactionForm() {
-  const { addTransaction } = useContext(TransactionContext)
-  const [person, setPerson] = useState('')
-  const [amount, setAmount] = useState('')
-  const [type, setType] = useState('lent')
-  const [date, setDate] = useState('')
+const AddTransactionForm = () => {
+  const { addNewTransaction } = useTransactions();
+  const [formData, setFormData] = useState({
+    description: "",
+    amount: ""
+  });
 
-  const onSubmit = (e) => {
-    e.preventDefault()
-    if (!person.trim() || !amount) return alert('Please provide person and amount')
-    addTransaction({ person: person.trim(), amount: Number(amount), type, date: date || null })
-    setPerson(''); setAmount(''); setType('lent'); setDate('')
-  }
+  const handleChange = (e) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.description || !formData.amount) return;
+
+    await addNewTransaction({
+      description: formData.description,
+      amount: parseFloat(formData.amount)
+    });
+
+    setFormData({ description: "", amount: "" });
+  };
 
   return (
-    <form onSubmit={onSubmit} className="bg-white p-4 rounded border">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
-        <input className="border p-2 rounded" placeholder="Person's name" value={person} onChange={e => setPerson(e.target.value)} />
-        <input className="border p-2 rounded" placeholder="Amount" value={amount} onChange={e => setAmount(e.target.value)} inputMode="numeric" />
-        <select className="border p-2 rounded" value={type} onChange={e => setType(e.target.value)}>
-          <option value="lent">I lent</option>
-          <option value="owed">I owe</option>
-        </select>
-        <input className="border p-2 rounded" type="date" value={date} onChange={e => setDate(e.target.value)} />
-      </div>
-      <div className="mt-3 flex justify-end">
-        <button type="submit" className="px-4 py-2 border rounded">Save</button>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-2">
+      <input
+        type="text"
+        name="description"
+        value={formData.description}
+        onChange={handleChange}
+        placeholder="Description"
+        className="border px-2 py-1 w-full"
+      />
+      <input
+        type="number"
+        name="amount"
+        value={formData.amount}
+        onChange={handleChange}
+        placeholder="Amount"
+        className="border px-2 py-1 w-full"
+      />
+      <button
+        type="submit"
+        className="bg-black text-white px-3 py-1 rounded"
+      >
+        Add Transaction
+      </button>
     </form>
-  )
-}
+  );
+};
+
+export default AddTransactionForm;

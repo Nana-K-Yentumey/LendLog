@@ -1,49 +1,90 @@
-import React, { useContext, useState, useMemo } from 'react'
-import { TransactionContext } from '../context/TransactionContext'
-import AddTransactionForm from '../components/AddTransactionForm'
-import TransactionList from '../components/TransactionList'
-import Summary from '../components/Summary'
-import ExportCSV from '../components/ExportCSV'
+// src/screens/Home.jsx
+import { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import {
+  addTransaction,
+  listenToTransactions,
+  deleteTransaction,
+} from "../services/firestore";
 
 export default function Home() {
-  const { transactions, clearAll } = useContext(TransactionContext)
-  const [query, setQuery] = useState('')
-  const [filterType, setFilterType] = useState('all')
-  const filtered = useMemo(() => {
-    return transactions.filter(t => {
-      if (filterType !== 'all' && t.type !== filterType) return false
-      if (!query) return true
-      const q = query.toLowerCase()
-      return (t.person && t.person.toLowerCase().includes(q)) || (t.type && t.type.toLowerCase().includes(q))
-    })
-  }, [transactions, query, filterType])
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState([]);
+  const [item, setItem] = useState("");
+  const [amount, setAmount] = useState("");
+
+  // Real-time listener
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = listenToTransactions(user.uid, setTransactions);
+
+    return () => unsubscribe();
+  }, [user]);
+
+  // Add transaction
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    if (!item || !amount) return;
+
+    await addTransaction(user.uid, {
+      item,
+      amount: parseFloat(amount),
+      status: "lent", // or "borrowed", depending on your use case
+    });
+
+    setItem("");
+    setAmount("");
+  };
+
+  // Delete transaction
+  const handleDelete = async (id) => {
+    await deleteTransaction(user.uid, id);
+  };
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">LendLog</h1>
-        <div className="text-sm text-gray-600">Simple ledger — minimal B&amp;W</div>
-      </header>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Welcome, {user.email}</h1>
 
-      <Summary transactions={transactions} />
+      <form onSubmit={handleAdd} className="mb-6 flex gap-2">
+        <input
+          type="text"
+          value={item}
+          onChange={(e) => setItem(e.target.value)}
+          placeholder="Item or Borrower"
+          className="border p-2 rounded flex-1"
+        />
+        <input
+          type="number"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder="Amount"
+          className="border p-2 rounded w-28"
+        />
+        <button type="submit" className="bg-blue-500 text-white px-4 rounded">
+          Add
+        </button>
+      </form>
 
-      <div className="flex flex-col md:flex-row md:items-center md:space-x-4">
-        <input className="border p-2 rounded w-full md:w-1/2" placeholder="Search by person or type" value={query} onChange={e => setQuery(e.target.value)} />
-        <select className="border p-2 rounded mt-2 md:mt-0" value={filterType} onChange={e => setFilterType(e.target.value)}>
-          <option value="all">All</option>
-          <option value="lent">I lent (Owed to me)</option>
-          <option value="owed">I owe</option>
-        </select>
-        <div className="ml-auto flex space-x-2">
-          <ExportCSV transactions={filtered} />
-          <button className="px-3 py-2 border rounded" onClick={clearAll}>Clear all</button>
-        </div>
-      </div>
-
-      <AddTransactionForm />
-
-      <TransactionList transactions={filtered} />
-
+      <ul className="space-y-2">
+        {transactions.map((t) => (
+          <li
+            key={t.id}
+            className="flex justify-between items-center border p-2 rounded"
+          >
+            <div>
+              <p className="font-semibold">{t.item}</p>
+              <p className="text-sm text-gray-600">${t.amount}</p>
+            </div>
+            <button
+              onClick={() => handleDelete(t.id)}
+              className="text-red-500 hover:underline"
+            >
+              Delete
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
-  )
+  );
 }
